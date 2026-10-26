@@ -1,0 +1,5 @@
+# Packages for every variant. podman, crun, nftables, cryptsetup, tpm2-tools,
+# xfsprogs and openssh-server are already in fedora-bootc:44.
+pciutils
+tpm2-tss
+openssl

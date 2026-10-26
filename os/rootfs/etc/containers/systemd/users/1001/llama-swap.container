@@ -1,0 +1,33 @@
+[Unit]
+Description=NeuralDrive llama-swap (llama.cpp inference)
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=llama-swap
+# The backend drop-in (llama-swap.container.d/backend.conf) sets Image=.
+Network=neuraldrive.network
+AddDevice=/dev/kfd
+AddDevice=/dev/dri
+GroupAdd=keep-groups
+UserNS=keep-id:uid=10001,gid=10001
+Volume=/var/lib/neuraldrive/models:/models:ro,z
+Volume=/var/lib/neuraldrive/config/llama-swap.yaml:/app/config.yaml:ro,z
+DropCapability=ALL
+NoNewPrivileges=true
+ReadOnly=true
+Tmpfs=/tmp:rw,size=1g,mode=1777
+ShmSize=8g
+Ulimit=memlock=-1:-1
+PidsLimit=4096
+HealthCmd=["curl","-fsS","http://127.0.0.1:8080/health"]
+HealthInterval=30s
+HealthStartPeriod=20s
+Notify=healthy
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target

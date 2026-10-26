@@ -1,0 +1,64 @@
+# NeuralDrive TLS front door.
+# nftables on the host redirects 443 -> 10443, 8443 -> 18443 and 9443 -> 19443,
+# so this container never needs a privileged port.
+# Upstream names resolve on the "neuraldrive" Podman network.
+{
+	admin off
+	auto_https off
+}
+
+(tls_nd) {
+	tls /tls/server.crt /tls/server.key
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+}
+
+# Open WebUI
+:10443 {
+	import tls_nd
+	reverse_proxy open-webui:8080
+}
+
+# OpenAI-compatible API, Ollama-compatible shim, and System API
+:18443 {
+	import tls_nd
+
+	handle /health {
+		respond "OK" 200
+	}
+
+	# The System API checks its own bearer token.
+	handle_path /system/* {
+		reverse_proxy system-api:3001
+	}
+
+	@authed header Authorization "Bearer {env.NEURALDRIVE_API_KEY}"
+
+	handle @authed {
+		handle /v1/* {
+			reverse_proxy llama-swap:8080 {
+				flush_interval -1
+			}
+		}
+		# Ollama-compatible shim, served by the System API.
+		handle /api/* {
+			reverse_proxy system-api:3001 {
+				flush_interval -1
+			}
+		}
+	}
+
+	handle {
+		respond "Unauthorized: provide Authorization: Bearer <API_KEY>" 401
+	}
+}
+
+# Arcane container manager
+:19443 {
+	import tls_nd
+	reverse_proxy arcane:3552
+}

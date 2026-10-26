@@ -1,0 +1,3 @@
+# AMD: amdgpu is in the Fedora kernel. The host needs firmware and a monitor.
+amd-gpu-firmware
+rocm-smi

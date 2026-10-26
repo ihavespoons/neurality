@@ -1,0 +1,16 @@
+[Unit]
+Description=NeuralDrive SELinux booleans for GPU containers
+DefaultDependencies=no
+After=local-fs.target
+Before=user@1001.service
+ConditionSecurity=selinux
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Lets container_t processes open /dev/kfd and /dev/dri. Set at each boot,
+# because setsebool -P cannot run during the image build.
+ExecStart=/usr/sbin/setsebool container_use_devices=on
+
+[Install]
+WantedBy=multi-user.target

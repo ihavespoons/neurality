@@ -1,0 +1,76 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mostlygeek/llama-swap/refs/heads/main/config-schema.json
+#
+# Default llama-swap configuration for NeuralDrive.
+# The host mounts /etc/neuraldrive/llama-swap.yaml over this file. The System API
+# rewrites that file when models are added, removed or benchmarked.
+#
+# Device names depend on the backend: ROCm0/ROCm1 for HIP, Vulkan0/Vulkan1 for Vulkan.
+# NEURALDRIVE_GPU_BACKEND is set by the image (ROCm or Vulkan).
+
+healthCheckTimeout: 600
+logLevel: info
+startPort: 10001
+sendLoadingState: true
+globalTTL: 0
+
+macros:
+  "server": >
+    /opt/llama/bin/llama-server
+    --host 127.0.0.1 --port ${PORT}
+    --n-gpu-layers all
+    --flash-attn on
+    --jinja
+    --metrics
+  "gpu0": "${env.NEURALDRIVE_GPU_BACKEND}0"
+  "gpu1": "${env.NEURALDRIVE_GPU_BACKEND}1"
+  # One model across both cards (pipeline parallel).
+  "both": "--split-mode layer --device ${gpu0},${gpu1}"
+  # One model on a single card.
+  "on0": "--split-mode none --device ${gpu0}"
+  "on1": "--split-mode none --device ${gpu1}"
+
+routing:
+  router:
+    # matrix: lists the model combinations that can run at the same time.
+    # Models pinned to different cards can run together. A model that spans
+    # both cards runs on its own. The System API generates these sets.
+    use: matrix
+    settings:
+      matrix:
+        vars:
+          big: example-70b-both
+          g0: example-14b-gpu0
+          emb: example-embed-gpu1
+        evict_costs:
+          # Keep the embedding model loaded for Open WebUI RAG when possible.
+          emb: 100
+          big: 30
+        sets:
+          one-per-card: "g0 & emb"
+          span-both: "big"
+
+# Example models. The System API replaces this section with the installed models.
+models:
+  "example-70b-both":
+    name: "Example 70B Q4 (both GPUs)"
+    cmd: |
+      ${server} ${both}
+      --model /models/example-70b-q4_k_m.gguf
+      --ctx-size 32768
+    unlisted: true
+
+  "example-14b-gpu0":
+    name: "Example 14B Q8 (GPU 0)"
+    cmd: |
+      ${server} ${on0}
+      --model /models/example-14b-q8_0.gguf
+      --ctx-size 32768
+    unlisted: true
+
+  "example-embed-gpu1":
+    name: "Example embedding model (GPU 1)"
+    cmd: |
+      ${server} ${on1}
+      --model /models/example-embed-f16.gguf
+      --embedding --pooling mean
+    unlisted: true

@@ -1,0 +1,36 @@
+#!/usr/sbin/nft -f
+# Default-deny firewall. Caddy runs rootless on high ports, so the public
+# ports are redirected: 443 -> 10443 (Open WebUI), 8443 -> 18443 (API),
+# 9443 -> 19443 (Arcane). The high ports accept only redirected connections.
+
+destroy table inet neuraldrive
+
+table inet neuraldrive {
+    chain prerouting {
+        type nat hook prerouting priority dstnat; policy accept;
+        tcp dport 443 redirect to :10443
+        tcp dport 8443 redirect to :18443
+        tcp dport 9443 redirect to :19443
+    }
+
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        ct state established,related accept
+        ct state invalid drop
+        iifname "lo" accept
+
+        ip protocol icmp icmp type echo-request limit rate 5/second accept
+        ip6 nexthdr icmpv6 icmpv6 type { echo-request, nd-neighbor-solicit, nd-neighbor-advert, nd-router-advert } accept
+
+        tcp dport { 10443, 18443, 19443 } ct status dnat accept
+        tcp dport 22 ct state new limit rate 3/minute burst 5 packets accept
+        udp dport 5353 limit rate 10/second accept
+        udp sport 67 udp dport 68 accept
+        udp sport 547 udp dport 546 accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+    }
+}

@@ -1,0 +1,2 @@
+# Intel Arc: phase 4.
+intel-gpu-firmware

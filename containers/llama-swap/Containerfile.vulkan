@@ -1,0 +1,60 @@
+# llama.cpp (Vulkan, Mesa RADV) + llama-swap. No ROCm userspace.
+
+ARG UBUNTU_IMAGE=docker.io/ubuntu:26.04
+
+FROM ${UBUNTU_IMAGE} AS build
+
+ARG LLAMA_CPP_REF=b11889
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential cmake git ca-certificates libssl-dev \
+        libvulkan-dev glslc spirv-headers \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --branch "${LLAMA_CPP_REF}" https://github.com/ggml-org/llama.cpp /src
+
+WORKDIR /src
+RUN cmake -S . -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DGGML_VULKAN=ON \
+        -DGGML_NATIVE=OFF \
+        -DLLAMA_BUILD_TESTS=OFF \
+        -DLLAMA_BUILD_EXAMPLES=OFF \
+        -DLLAMA_BUILD_UI=OFF \
+        -DLLAMA_USE_PREBUILT_UI=OFF \
+    && cmake --build build --config Release -j"$(nproc)" --target llama-server llama-bench \
+    && mkdir -p /out/opt/llama/bin /out/opt/llama/lib \
+    && cp build/bin/llama-server build/bin/llama-bench /out/opt/llama/bin/ \
+    && find build -name '*.so*' -exec cp -P {} /out/opt/llama/lib/ \;
+
+FROM ${UBUNTU_IMAGE} AS llama-swap-dl
+
+ARG LLAMA_SWAP_VERSION=266
+ARG LLAMA_SWAP_SHA256=
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+COPY fetch-llama-swap.sh /usr/local/bin/fetch-llama-swap.sh
+RUN /usr/local/bin/fetch-llama-swap.sh "${LLAMA_SWAP_VERSION}" "${LLAMA_SWAP_SHA256}" /out
+
+FROM ${UBUNTU_IMAGE}
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libgomp1 libssl3t64 libvulkan1 mesa-vulkan-drivers curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid 10001 --home /app --no-create-home app
+
+COPY --from=build /out/ /
+COPY --from=llama-swap-dl /out/llama-swap /app/llama-swap
+COPY config.yaml /app/config.yaml
+
+ENV PATH=/app:/opt/llama/bin:${PATH} \
+    LD_LIBRARY_PATH=/opt/llama/lib \
+    NEURALDRIVE_GPU_BACKEND=Vulkan
+
+USER 10001:10001
+WORKDIR /app
+EXPOSE 8080
+HEALTHCHECK CMD ["curl", "-fsS", "http://127.0.0.1:8080/health"]
+ENTRYPOINT ["/app/llama-swap", "-listen", ":8080", "-config", "/app/config.yaml", "-watch-config"]

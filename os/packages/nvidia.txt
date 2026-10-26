@@ -1,0 +1,1 @@
+# NVIDIA: phase 4. Needs akmod-nvidia from RPM Fusion, signed with the project MOK key.

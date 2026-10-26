@@ -1,0 +1,15 @@
+[Unit]
+Description=NeuralDrive first-boot secrets and TLS certificate
+After=network-online.target user-runtime-dir@1001.service systemd-tmpfiles-setup.service
+Wants=network-online.target
+Requires=user-runtime-dir@1001.service
+Before=user@1001.service
+ConditionPathExists=!/var/lib/neuraldrive/.firstboot-done
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/neuraldrive/firstboot
+
+[Install]
+WantedBy=multi-user.target

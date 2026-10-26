@@ -1,0 +1,20 @@
+# Caddy TLS front door on Wolfi.
+
+ARG WOLFI_BASE=cgr.dev/chainguard/wolfi-base@sha256:360896efb0753a5701c48f860e17130c205eae5a264797aa3e7ea126ee2923a7
+
+FROM ${WOLFI_BASE}
+
+RUN apk add --no-cache caddy \
+    && addgroup -S -g 10001 caddy-nd \
+    && adduser -S -D -H -u 10001 -G caddy-nd caddy-nd \
+    && mkdir -p /data /config \
+    && chown 10001:10001 /data /config
+
+COPY Caddyfile /etc/caddy/Caddyfile
+
+ENV XDG_DATA_HOME=/data \
+    XDG_CONFIG_HOME=/config
+
+USER 10001:10001
+EXPOSE 10443 18443 19443
+ENTRYPOINT ["/usr/bin/caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

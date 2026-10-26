@@ -51,7 +51,7 @@ COPY config.yaml /app/config.yaml
 
 ENV PATH=/app:/opt/llama/bin:${PATH} \
     LD_LIBRARY_PATH=/opt/llama/lib \
-    NEURALDRIVE_GPU_BACKEND=Vulkan
+    SIBYL_GPU_BACKEND=Vulkan
 
 USER 10001:10001
 WORKDIR /app

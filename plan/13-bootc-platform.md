@@ -1,5 +1,7 @@
 # Implementation Plan: 13-bootc-platform.md — Fedora bootc host, containerized ROCm inference
 
+The project is renamed from NeuralDrive to Sibyl. The new bootc tree uses the new name. The live-build tree keeps the old name until phase 5 removes it.
+
 This plan replaces the Debian live-build host and the Ollama runtime. It records the decisions from the October 2026 design rounds. It supersedes `01-base-system.md`, `03-llm-runtime.md` and the host parts of `04-storage-persistence.md` and `05-security.md` once the new build reaches parity.
 
 ## Decisions
@@ -42,19 +44,19 @@ scripts/bootc/               # local build helpers, ISO creation, benchmark
 
 ## Runtime layout
 
-All NeuralDrive containers run rootless under one system user, `neuraldrive` (UID 1001). Rootless Podman confines each container to that user's subordinate UID range. A container escape gives an unprivileged user, not root.
+All Sibyl containers run rootless under one system user, `sibyl` (UID 1001). Rootless Podman confines each container to that user's subordinate UID range. A container escape gives an unprivileged user, not root.
 
 Arcane uses the same user's Podman socket. It therefore sees and controls the core containers. It runs with `SecurityLabelDisable=true`, because the Arcane docs require it on SELinux hosts. The socket proxy from the earlier design is not used. A proxy cannot filter the Quadlet and D-Bus calls that Arcane needs, and rootless Podman already removes root from the blast radius.
 
-systemd owns the core services. The Quadlet files are in the OS image under `/etc/containers/systemd/users/1001/`. Arcane can stop a core container, but the next boot or `systemctl --user restart` brings it back from the image definition. User stacks that Arcane creates live under `/var/lib/neuraldrive/stacks`.
+systemd owns the core services. The Quadlet files are in the OS image under `/etc/containers/systemd/users/1001/`. Arcane can stop a core container, but the next boot or `systemctl --user restart` brings it back from the image definition. User stacks that Arcane creates live under `/var/lib/sibyl/stacks`.
 
-| Container | Image | Port on the `neuraldrive` network | Exposed on the host |
+| Container | Image | Port on the `sibyl` network | Exposed on the host |
 |---|---|---|---|
-| `llama-swap` | `ghcr.io/ihavespoons/neuraldrive-llama-swap:<ver>-hip` or `-vulkan` | 8080 | No |
+| `llama-swap` | `ghcr.io/ihavespoons/sibyl-llama-swap:<ver>-hip` or `-vulkan` | 8080 | No |
 | `open-webui` | `ghcr.io/open-webui/open-webui` (pinned digest) | 8080 | No |
-| `system-api` | `ghcr.io/ihavespoons/neuraldrive-system-api` | 3001 | No |
+| `system-api` | `ghcr.io/ihavespoons/sibyl-system-api` | 3001 | No |
 | `arcane` | `ghcr.io/getarcaneapp/manager` (pinned digest) | 3552 | No |
-| `caddy` | `ghcr.io/ihavespoons/neuraldrive-caddy` | 10443, 18443, 19443 | Yes, through nftables redirect |
+| `caddy` | `ghcr.io/ihavespoons/sibyl-caddy` | 10443, 18443, 19443 | Yes, through nftables redirect |
 
 nftables redirects host port 443 to 10443 (Open WebUI), 8443 to 18443 (OpenAI API and System API), and 9443 to 19443 (Arcane). The input chain accepts the high ports only for redirected connections. This keeps `net.ipv4.ip_unprivileged_port_start` at its default of 1024.
 
@@ -112,7 +114,7 @@ llama-swap has no Ollama API. The System API adds `/api/tags`, `/api/show`, `/ap
 `os/Containerfile` starts from `quay.io/fedora/fedora-bootc:44` and adds:
 
 - The packages in `os/packages/common.txt` and `os/packages/<variant>.txt`.
-- The `neuraldrive` user, its subordinate ID ranges, and lingering so its user manager starts at boot.
+- The `sibyl` user, its subordinate ID ranges, and lingering so its user manager starts at boot.
 - Quadlet units, the Podman network, sysctl and nftables rules.
 - The container signature policy in `/etc/containers/policy.json`.
 - Host-only tools that cannot run in a container: GPU detection, the installer and disk management.
@@ -123,13 +125,13 @@ The NVIDIA variant adds `akmod-nvidia` built at image build time and signed with
 
 ### GPU access from rootless containers
 
-The `neuraldrive` user is in the `render` and `video` groups. Quadlet passes `/dev/kfd` and `/dev/dri` with `AddDevice=` and keeps the groups with `GroupAdd=keep-groups`. SELinux blocks device access by `container_t` unless the `container_use_devices` boolean is on. `neuraldrive-selinux.service` sets it at each boot.
+The `sibyl` user is in the `render` and `video` groups. Quadlet passes `/dev/kfd` and `/dev/dri` with `AddDevice=` and keeps the groups with `GroupAdd=keep-groups`. SELinux blocks device access by `container_t` unless the `container_use_devices` boolean is on. `sibyl-selinux.service` sets it at each boot.
 
 ## Storage
 
 | Mode | Root | Models and data | Unlock |
 |---|---|---|---|
-| Live USB | Read-only image from the USB | Persistence partition on the USB, label `ND_PERSIST`, mounted at `/var/lib/neuraldrive` | Passphrase at boot, optional |
+| Live USB | Read-only image from the USB | Persistence partition on the USB, label `SIBYL_PERSIST`, mounted at `/var/lib/sibyl` | Passphrase at boot, optional |
 | Installed | bootc on internal disk, A/B deployments | `/var` on the root disk, plus pools under `/var/mnt/models-N` | TPM2 through `systemd-cryptenroll`, passphrase as recovery |
 
 The guided installer runs from the live USB. It wraps `bootc install to-disk` with these steps:
@@ -144,11 +146,32 @@ Model storage pools are extra disks that the System API formats as LUKS2 plus XF
 
 The live USB is built with `bootc-image-builder --type iso`, plus a persistence partition that the first boot creates in the free space on the stick.
 
+## Setup wizard
+
+The setup wizard configures the hardware and the services. It runs in the TUI in three places: at the end of the disk installer, at the first boot of a live USB, and on demand with `sibyl setup`. Every step can run again later without a reinstall.
+
+1. Detect the GPUs. The wizard reads `lspci` and `amd-smi` (or `nvidia-smi`), and lists each card with its model, VRAM, PCIe link width and speed.
+2. Choose the GPUs for inference. The user can exclude a card, for example a card that drives a display.
+3. Choose the default layout for the selected GPUs: span one model across all of them, or pin one model per card. A model can override the default later.
+4. Choose the backend: HIP, Vulkan, or "benchmark". The benchmark runs a short `llama-bench` on both images with a small model and keeps the faster one.
+5. Set the network: hostname, DHCP or a static address.
+6. Set the Open WebUI admin account and import SSH public keys.
+7. Show the API key and the TLS certificate fingerprint.
+8. Optionally download a first model from the curated list, sized to the VRAM of the selected GPUs.
+
+The wizard writes `/var/lib/sibyl/config/hardware.yaml`. The System API reads that file and generates three outputs:
+
+- The llama-swap configuration, with device names and matrix sets for the chosen layout.
+- The backend drop-in `llama-swap.container.d/backend.conf`, with the image and the GPU visibility variable (`HIP_VISIBLE_DEVICES` for HIP, `GGML_VK_VISIBLE_DEVICES` for Vulkan).
+- The model size limits that the model picker uses.
+
+When the GPU set changes, for example after a card is added, the System API detects the difference at boot and asks the user to run the GPU steps again.
+
 ## Security
 
 - SELinux stays enforcing. Only Arcane runs with `SecurityLabelDisable=true`.
 - Secure Boot uses the Fedora shim and kernel. The NVIDIA variant adds the project MOK key.
-- CI signs every image with cosign keyless signing. `/etc/containers/policy.json` requires a signature from this repo's workflow for `ghcr.io/ihavespoons/neuraldrive-*`. Third-party images are pinned by digest in the Quadlet files.
+- CI signs every image with cosign keyless signing. `/etc/containers/policy.json` requires a signature from this repo's workflow for `ghcr.io/ihavespoons/sibyl-*`. Third-party images are pinned by digest in the Quadlet files.
 - Every Quadlet container drops all capabilities, sets `NoNewPrivileges=true` and `ReadOnly=true`, and gets a tmpfs for `/tmp`. Writable state goes to named volumes only.
 - nftables default-deny. Only 443, 8443, 9443 and rate-limited 22 are open.
 - SSH accepts keys only. Root login is off.
@@ -159,13 +182,13 @@ The live USB is built with `bootc-image-builder --type iso`, plus a persistence 
 | Phase | Scope | Exit check |
 |---|---|---|
 | 1 | Inference images, host Containerfile, Quadlets, Caddy image, CI build and signing | The AMD host image boots in a VM. llama-swap serves a GGUF model on the 7900 XTX. |
-| 2 | System API and TUI in containers. Replace `systemctl` calls with the Podman and systemd D-Bus APIs. Hugging Face picker. Ollama shim. Benchmark. | `tests/test_api.py` passes against the new stack. |
-| 3 | Live ISO, persistence, guided installer, LUKS with TPM2, model pools | Install from USB to disk on the target host, and unlock without a passphrase. |
+| 2 | System API and TUI in containers. Replace `systemctl` calls with the Podman and systemd D-Bus APIs. Setup wizard with GPU selection and layout. Hugging Face picker. Ollama shim. Benchmark. | `tests/test_api.py` passes against the new stack. The wizard configures one card and two cards on the target host. |
+| 3 | Live ISO, persistence, guided disk installer that ends in the setup wizard, LUKS with TPM2, model pools | Install from USB to disk on the target host, and unlock without a passphrase. |
 | 4 | NVIDIA and Intel variants, offline update bundles, signature policy enforced | Each variant boots. An unsigned image fails to pull. |
-| 5 | Remove the live-build tree, update `AGENTS.md`, `README.md` and both mdbooks | No references to Ollama or live-build remain. |
+| 5 | Remove the live-build tree. Rename the repo, `AGENTS.md`, `README.md` and both mdbooks to Sibyl. | No references to Ollama, live-build or NeuralDrive remain. |
 
 ## Open items
 
-- The System API restarts services with `systemctl` (`config/includes.chroot/usr/lib/neuraldrive/api/neuraldrive_api/main.py`). In a container it must call the user systemd manager over D-Bus instead. Phase 2 must design that interface and limit it to the NeuralDrive units.
+- The System API restarts services with `systemctl` (`config/includes.chroot/usr/lib/neuraldrive/api/neuraldrive_api/main.py`). In a container it must call the user systemd manager over D-Bus instead. Phase 2 must design that interface and limit it to the Sibyl units.
 - The TUI runs on the console today. As a container it needs `/dev/tty1`. Phase 2 must decide between a container on tty1 and a host package.
 - Arcane Git Sync polls and has no webhooks. Compose files pulled from Git are read-only in the Arcane UI.

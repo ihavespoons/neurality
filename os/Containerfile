@@ -1,5 +1,5 @@
-# NeuralDrive host image (Fedora bootc).
-# Build:  podman build -f os/Containerfile --build-arg GPU_VARIANT=amd -t neuraldrive-os:amd os
+# Sibyl host image (Fedora bootc).
+# Build:  podman build -f os/Containerfile --build-arg GPU_VARIANT=amd -t sibyl-os:amd os
 # The GPU userspace (ROCm, Vulkan) lives in the inference container, not here.
 
 ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:44@sha256:1543ba2788ee2055e0d44a8d879c79a2f527326600eca95a5f673414a48ff73c
@@ -7,8 +7,8 @@ ARG BASE_IMAGE=quay.io/fedora/fedora-bootc:44@sha256:1543ba2788ee2055e0d44a8d879
 FROM ${BASE_IMAGE}
 
 ARG GPU_VARIANT=amd
-ARG NEURALDRIVE_VERSION=dev
-# Tag of the NeuralDrive service images that the Quadlet units pull.
+ARG SIBYL_VERSION=dev
+# Tag of the Sibyl service images that the Quadlet units pull.
 ARG IMAGE_TAG=latest
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -26,9 +26,9 @@ COPY rootfs/ /
 RUN grep -E '^(render|video):' /usr/lib/group >> /etc/group \
     && grep -E '^(render|video):' /usr/lib/group | awk -F: '{print $1":!::"}' >> /etc/gshadow
 
-RUN echo "${NEURALDRIVE_VERSION}" > /usr/share/neuraldrive/version \
-    && echo "${GPU_VARIANT}" > /usr/share/neuraldrive/gpu-variant \
-    && systemctl enable nftables.service neuraldrive-selinux.service neuraldrive-firstboot.service \
+RUN echo "${SIBYL_VERSION}" > /usr/share/sibyl/version \
+    && echo "${GPU_VARIANT}" > /usr/share/sibyl/gpu-variant \
+    && systemctl enable nftables.service sibyl-selinux.service sibyl-firstboot.service \
     && systemctl --global enable podman.socket \
     && sed -i "s/@IMAGE_TAG@/${IMAGE_TAG}/g" /etc/containers/systemd/users/1001/*.container \
         /etc/containers/systemd/users/1001/*.container.d/*.conf

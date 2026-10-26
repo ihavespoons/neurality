@@ -1,5 +1,5 @@
 [Unit]
-Description=NeuralDrive SELinux booleans for GPU containers
+Description=Sibyl SELinux booleans for GPU containers
 DefaultDependencies=no
 After=local-fs.target
 Before=user@1001.service

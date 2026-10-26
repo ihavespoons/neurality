@@ -1,5 +1,5 @@
 [Unit]
-Description=NeuralDrive Open WebUI
+Description=Sibyl Open WebUI
 Wants=llama-swap.service
 After=llama-swap.service
 
@@ -7,13 +7,13 @@ After=llama-swap.service
 ContainerName=open-webui
 # v0.12.4
 Image=ghcr.io/open-webui/open-webui@sha256:a5b9e403d19154796850679c8c5d1295301cee954be8b84ddd62af92426558f7
-Network=neuraldrive.network
+Network=sibyl.network
 Volume=open-webui.volume:/app/backend/data:Z
 Secret=open-webui-secret-key,type=env,target=WEBUI_SECRET_KEY
 Environment=ENABLE_OLLAMA_API=false
 Environment=OPENAI_API_BASE_URL=http://llama-swap:8080/v1
 Environment=OPENAI_API_KEY=none
-Environment=WEBUI_NAME=NeuralDrive
+Environment=WEBUI_NAME=Sibyl
 Environment=WEBUI_AUTH=true
 Environment=ENABLE_SIGNUP=false
 Environment=DEFAULT_USER_ROLE=user

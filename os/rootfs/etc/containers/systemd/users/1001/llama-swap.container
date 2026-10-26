@@ -1,18 +1,18 @@
 [Unit]
-Description=NeuralDrive llama-swap (llama.cpp inference)
+Description=Sibyl llama-swap (llama.cpp inference)
 Wants=network-online.target
 After=network-online.target
 
 [Container]
 ContainerName=llama-swap
 # The backend drop-in (llama-swap.container.d/backend.conf) sets Image=.
-Network=neuraldrive.network
+Network=sibyl.network
 AddDevice=/dev/kfd
 AddDevice=/dev/dri
 GroupAdd=keep-groups
 UserNS=keep-id:uid=10001,gid=10001
-Volume=/var/lib/neuraldrive/models:/models:ro,z
-Volume=/var/lib/neuraldrive/config/llama-swap.yaml:/app/config.yaml:ro,z
+Volume=/var/lib/sibyl/models:/models:ro,z
+Volume=/var/lib/sibyl/config/llama-swap.yaml:/app/config.yaml:ro,z
 DropCapability=ALL
 NoNewPrivileges=true
 ReadOnly=true

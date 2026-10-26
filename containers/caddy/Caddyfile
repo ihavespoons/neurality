@@ -1,7 +1,7 @@
-# NeuralDrive TLS front door.
+# Sibyl TLS front door.
 # nftables on the host redirects 443 -> 10443, 8443 -> 18443 and 9443 -> 19443,
 # so this container never needs a privileged port.
-# Upstream names resolve on the "neuraldrive" Podman network.
+# Upstream names resolve on the "sibyl" Podman network.
 {
 	admin off
 	auto_https off
@@ -36,7 +36,7 @@
 		reverse_proxy system-api:3001
 	}
 
-	@authed header Authorization "Bearer {env.NEURALDRIVE_API_KEY}"
+	@authed header Authorization "Bearer {env.SIBYL_API_KEY}"
 
 	handle @authed {
 		handle /v1/* {

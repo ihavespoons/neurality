@@ -1,16 +1,16 @@
 [Unit]
-Description=NeuralDrive Caddy TLS front door
+Description=Sibyl Caddy TLS front door
 
 [Container]
 ContainerName=caddy
-Image=ghcr.io/ihavespoons/neuraldrive-caddy:@IMAGE_TAG@
-Network=neuraldrive.network
+Image=ghcr.io/ihavespoons/sibyl-caddy:@IMAGE_TAG@
+Network=sibyl.network
 PublishPort=10443:10443
 PublishPort=18443:18443
 PublishPort=19443:19443
 UserNS=keep-id:uid=10001,gid=10001
-Volume=/var/lib/neuraldrive/tls:/tls:ro,z
-Secret=neuraldrive-api-key,type=env,target=NEURALDRIVE_API_KEY
+Volume=/var/lib/sibyl/tls:/tls:ro,z
+Secret=sibyl-api-key,type=env,target=SIBYL_API_KEY
 DropCapability=ALL
 NoNewPrivileges=true
 ReadOnly=true

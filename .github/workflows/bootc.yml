@@ -64,15 +64,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: neuraldrive-llama-swap
+          - name: sibyl-llama-swap
             context: containers/llama-swap
             file: containers/llama-swap/Containerfile.hip
             suffix: -hip
-          - name: neuraldrive-llama-swap
+          - name: sibyl-llama-swap
             context: containers/llama-swap
             file: containers/llama-swap/Containerfile.vulkan
             suffix: -vulkan
-          - name: neuraldrive-caddy
+          - name: sibyl-caddy
             context: containers/caddy
             file: containers/caddy/Containerfile
             suffix: ''
@@ -161,7 +161,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/neuraldrive-os
+          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/sibyl-os
           flavor: |
             latest=false
             suffix=-${{ matrix.variant }}
@@ -181,7 +181,7 @@ jobs:
           build-args: |
             GPU_VARIANT=${{ matrix.variant }}
             IMAGE_TAG=${{ needs.tag.outputs.image_tag }}
-            NEURALDRIVE_VERSION=${{ needs.tag.outputs.image_tag }}
+            SIBYL_VERSION=${{ needs.tag.outputs.image_tag }}
           cache-from: type=gha,scope=os-${{ matrix.variant }}
           cache-to: type=gha,mode=max,scope=os-${{ matrix.variant }}
 
@@ -191,6 +191,6 @@ jobs:
       - name: Sign image
         if: needs.tag.outputs.push == 'true'
         env:
-          IMAGE: ${{ env.REGISTRY }}/${{ env.OWNER }}/neuraldrive-os
+          IMAGE: ${{ env.REGISTRY }}/${{ env.OWNER }}/sibyl-os
           DIGEST: ${{ steps.build.outputs.digest }}
         run: cosign sign --yes "${IMAGE}@${DIGEST}"

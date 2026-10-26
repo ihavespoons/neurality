@@ -1,11 +1,11 @@
 #!/bin/bash
 # Create the TLS certificate and the Podman secrets that the Quadlet units use.
-# Runs once. Delete /var/lib/neuraldrive/.firstboot-done to run it again.
+# Runs once. Delete /var/lib/sibyl/.firstboot-done to run it again.
 set -euo pipefail
 
-ND_USER=neuraldrive
+ND_USER=sibyl
 ND_UID="$(id -u "$ND_USER")"
-STATE=/var/lib/neuraldrive
+STATE=/var/lib/sibyl
 TLS_DIR="$STATE/tls"
 
 as_nd() {
@@ -19,19 +19,19 @@ secret_exists() {
 ip_addr="$(ip -4 route get 1 2>/dev/null | awk '{for (i = 1; i < NF; i++) if ($i == "src") {print $(i + 1); exit}}')"
 
 if [ ! -s "$TLS_DIR/server.crt" ]; then
-    san="DNS:neuraldrive.local,DNS:neuraldrive"
+    san="DNS:sibyl.local,DNS:sibyl"
     [ -n "$ip_addr" ] && san="$san,IP:$ip_addr"
     openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -sha256 -days 825 -nodes \
         -keyout "$TLS_DIR/server.key" -out "$TLS_DIR/server.crt" \
-        -subj "/O=NeuralDrive/CN=neuraldrive.local" \
+        -subj "/O=Sibyl/CN=sibyl.local" \
         -addext "subjectAltName=$san"
     chown "$ND_USER:$ND_USER" "$TLS_DIR/server.key" "$TLS_DIR/server.crt"
     chmod 0600 "$TLS_DIR/server.key"
     chmod 0644 "$TLS_DIR/server.crt"
 fi
 
-if ! secret_exists neuraldrive-api-key; then
-    printf 'nd-%s' "$(openssl rand -hex 24)" | as_nd podman secret create neuraldrive-api-key - >/dev/null
+if ! secret_exists sibyl-api-key; then
+    printf 'nd-%s' "$(openssl rand -hex 24)" | as_nd podman secret create sibyl-api-key - >/dev/null
 fi
 
 if ! secret_exists arcane-encryption-key; then
@@ -43,7 +43,7 @@ if ! secret_exists open-webui-secret-key; then
 fi
 
 if [ ! -e "$STATE/config/arcane.env" ]; then
-    printf 'APP_URL=https://%s:9443\n' "${ip_addr:-neuraldrive.local}" > "$STATE/config/arcane.env"
+    printf 'APP_URL=https://%s:9443\n' "${ip_addr:-sibyl.local}" > "$STATE/config/arcane.env"
     chown "$ND_USER:$ND_USER" "$STATE/config/arcane.env"
     chmod 0640 "$STATE/config/arcane.env"
 fi

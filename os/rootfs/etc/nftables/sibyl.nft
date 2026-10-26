@@ -3,9 +3,9 @@
 # ports are redirected: 443 -> 10443 (Open WebUI), 8443 -> 18443 (API),
 # 9443 -> 19443 (Arcane). The high ports accept only redirected connections.
 
-destroy table inet neuraldrive
+destroy table inet sibyl
 
-table inet neuraldrive {
+table inet sibyl {
     chain prerouting {
         type nat hook prerouting priority dstnat; policy accept;
         tcp dport 443 redirect to :10443

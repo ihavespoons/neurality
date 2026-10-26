@@ -1,11 +1,11 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/mostlygeek/llama-swap/refs/heads/main/config-schema.json
 #
-# Default llama-swap configuration for NeuralDrive.
-# The host mounts /etc/neuraldrive/llama-swap.yaml over this file. The System API
+# Default llama-swap configuration for Sibyl.
+# The host mounts /etc/sibyl/llama-swap.yaml over this file. The System API
 # rewrites that file when models are added, removed or benchmarked.
 #
 # Device names depend on the backend: ROCm0/ROCm1 for HIP, Vulkan0/Vulkan1 for Vulkan.
-# NEURALDRIVE_GPU_BACKEND is set by the image (ROCm or Vulkan).
+# SIBYL_GPU_BACKEND is set by the image (ROCm or Vulkan).
 
 healthCheckTimeout: 600
 logLevel: info
@@ -21,8 +21,8 @@ macros:
     --flash-attn on
     --jinja
     --metrics
-  "gpu0": "${env.NEURALDRIVE_GPU_BACKEND}0"
-  "gpu1": "${env.NEURALDRIVE_GPU_BACKEND}1"
+  "gpu0": "${env.SIBYL_GPU_BACKEND}0"
+  "gpu1": "${env.SIBYL_GPU_BACKEND}1"
   # One model across both cards (pipeline parallel).
   "both": "--split-mode layer --device ${gpu0},${gpu1}"
   # One model on a single card.

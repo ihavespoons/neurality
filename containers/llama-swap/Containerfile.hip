@@ -62,7 +62,7 @@ ENV PATH=/app:/opt/llama/bin:${PATH} \
     LD_LIBRARY_PATH=/opt/rocm/lib:/opt/llama/lib \
     ROCBLAS_TENSILE_LIBPATH=/opt/rocm/lib/rocblas/library \
     HIPBLASLT_TENSILE_LIBPATH=/opt/rocm/lib/hipblaslt/library \
-    NEURALDRIVE_GPU_BACKEND=ROCm
+    SIBYL_GPU_BACKEND=ROCm
 
 USER 10001:10001
 WORKDIR /app

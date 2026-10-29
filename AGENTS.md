@@ -87,6 +87,7 @@ This path **skips the Docker entrypoint's live-build patches**. If you hit "GRUB
 - `tests/test-boot.sh` — boot-flow test
 - `tests/test-gpu.sh` — GPU detection test
 - `tests/test_api.py` — API surface test
+- `tests/diag/` — unit tests for the Sibyl `sibyl-diag` diagnostics and watchdog package (`python3 -m unittest discover -s tests/diag`). CI runs them in `.github/workflows/bootc.yml` before the OS image builds. Design: `plan/14-diagnostics-and-fleet.md`.
 
 There is no CI-enforced lint/format gate in this repo today. If you add one, document it here.
 

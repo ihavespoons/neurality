@@ -5,6 +5,7 @@ on:
     paths:
       - 'os/**'
       - 'containers/**'
+      - 'tests/diag/**'
       - '.github/workflows/bootc.yml'
   push:
     branches: [main]
@@ -12,6 +13,7 @@ on:
     paths:
       - 'os/**'
       - 'containers/**'
+      - 'tests/diag/**'
       - '.github/workflows/bootc.yml'
   workflow_dispatch:
 
@@ -52,6 +54,13 @@ jobs:
           else
             echo "push=true" >> "$GITHUB_OUTPUT"
           fi
+
+  diag-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # sibyl-diag is standard library only, so the runner's Python is enough.
+      - run: python3 -W error::ResourceWarning -m unittest discover -s tests/diag -v
 
   service-images:
     needs: tag
@@ -135,7 +144,7 @@ jobs:
         run: cosign sign --yes "${IMAGE}@${DIGEST}"
 
   os-image:
-    needs: [tag, service-images]
+    needs: [tag, service-images, diag-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: read

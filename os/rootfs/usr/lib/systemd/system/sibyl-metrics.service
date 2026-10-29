@@ -1,0 +1,26 @@
+[Unit]
+Description=Sibyl metrics sampler (GPU, host, tokens per second)
+After=sibyl-boot-check.service
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/sibyl-diag metrics-daemon
+WatchdogSec=120
+Restart=always
+RestartSec=10
+Nice=10
+IOSchedulingClass=idle
+# Reads sysfs and llama-swap on loopback. Writes only metrics.db.
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sibyl/diagnostics
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

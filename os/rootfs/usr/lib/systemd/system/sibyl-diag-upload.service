@@ -1,0 +1,14 @@
+[Unit]
+Description=Sibyl diagnostics upload queue
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Exits at once unless upload consent is "automatic".
+ExecStart=/usr/bin/sibyl-diag upload-pending
+ProtectSystem=strict
+ReadWritePaths=/var/lib/sibyl/diagnostics
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes

@@ -1,0 +1,36 @@
+# Sibyl diagnostics defaults. Override any key in
+# /var/lib/sibyl/config/diagnostics.toml. Upload consent is not set here:
+# run `sibyl-diag consent off|manual|automatic`.
+
+[capture]
+# Seconds between metric samples (GPU, host, llama-server counters).
+sample_interval = 10
+# Days of metrics and per-request stats kept in metrics.db.
+retention_days = 7
+# Incident directories kept, oldest removed first.
+max_incidents = 50
+max_incident_bytes = 2147483648
+
+[watchdog]
+enabled = true
+# llama-swap publishes on host loopback only (llama-swap.container).
+llama_swap_url = "http://127.0.0.1:18080"
+probe_interval = 30
+probe_timeout = 10
+# Consecutive failed probes before the watchdog acts.
+failures_before_action = 3
+# A request with no token or batch progress for this long counts as stalled.
+stall_seconds = 300
+# Recovery ladder: restart, GPU reset, reboot, then stop acting.
+max_restarts = 3
+restart_window = 900
+gpu_reset = true
+reboot = true
+max_reboots = 2
+reboot_window = 21600
+incident_cooldown = 600
+
+[upload]
+# Set at image build time once the Sibyl diagnostics service exists.
+endpoint = ""
+max_bundle_bytes = 52428800

@@ -1,0 +1,10 @@
+[Unit]
+Description=Retry queued Sibyl diagnostic uploads
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1h
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

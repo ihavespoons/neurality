@@ -29,8 +29,13 @@ RUN grep -E '^(render|video):' /usr/lib/group >> /etc/group \
 RUN echo "${SIBYL_VERSION}" > /usr/share/sibyl/version \
     && echo "${GPU_VARIANT}" > /usr/share/sibyl/gpu-variant \
     && systemctl enable nftables.service sibyl-selinux.service sibyl-firstboot.service \
+        sibyl-boot-check.service sibyl-watchdog.service sibyl-metrics.service \
+        sibyl-diag-upload.timer \
     && systemctl --global enable podman.socket \
     && sed -i "s/@IMAGE_TAG@/${IMAGE_TAG}/g" /etc/containers/systemd/users/1001/*.container \
         /etc/containers/systemd/users/1001/*.container.d/*.conf
+
+RUN python3 -I -m compileall -q /usr/lib/sibyl/python \
+    && /usr/bin/sibyl-diag --help >/dev/null
 
 RUN bootc container lint

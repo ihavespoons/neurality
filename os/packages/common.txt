@@ -3,3 +3,5 @@
 pciutils
 tpm2-tss
 openssl
+# sibyl-diag (diagnostics and watchdog) is Python standard library only.
+python3

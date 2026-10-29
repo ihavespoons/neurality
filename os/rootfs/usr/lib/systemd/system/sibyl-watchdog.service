@@ -1,0 +1,21 @@
+[Unit]
+Description=Sibyl inference watchdog
+After=sibyl-boot-check.service user@1001.service
+Wants=user@1001.service
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/sibyl-diag watchdog-daemon
+# systemd restarts the watchdog itself if a tick hangs.
+WatchdogSec=180
+Restart=always
+RestartSec=10
+# Runs as root: it restarts user units, reads the kernel journal, writes
+# amdgpu debugfs for a GPU reset, and can reboot the host.
+ProtectHome=read-only
+PrivateTmp=yes
+MemoryMax=512M
+OOMScoreAdjust=-900
+
+[Install]
+WantedBy=multi-user.target

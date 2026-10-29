@@ -1,0 +1,10 @@
+#!/usr/bin/python3 -I
+# Sibyl diagnostics CLI. The package lives outside site-packages, so that
+# dnf never sees it and a bootc upgrade replaces it with the image.
+import sys
+
+sys.path.insert(0, "/usr/lib/sibyl/python")
+
+from sibyl_diag.cli import main  # noqa: E402
+
+sys.exit(main())
